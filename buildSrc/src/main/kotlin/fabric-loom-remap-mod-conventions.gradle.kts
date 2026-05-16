@@ -5,7 +5,6 @@ plugins {
 
 val modId: String by project
 val minecraftVersion: String by project
-val fabricApiVersion: String by project
 val parchmentMinecraftVersion: String by project
 val parchmentMappingsVersion: String by project
 
@@ -38,5 +37,14 @@ dependencies {
         parchment("${versionCatalog.module(VersionCatalogLibrary.ParchmentData)}-$parchmentMinecraftVersion:$parchmentMappingsVersion@zip")
     })
     modImplementation(versionCatalog.library(VersionCatalogLibrary.FabricLoader))
-    modImplementation("${versionCatalog.module(VersionCatalogLibrary.FabricApi)}:$fabricApiVersion")
+}
+
+val verifyRemappedJar = tasks.register<VerifyRemappedJarTask>("verifyRemappedJar") {
+    dependsOn("remapJar")
+    val remapJar = tasks.named<AbstractArchiveTask>("remapJar")
+    remappedJar.set(remapJar.flatMap { it.archiveFile })
+}
+
+tasks.named("build") {
+    dependsOn(verifyRemappedJar)
 }

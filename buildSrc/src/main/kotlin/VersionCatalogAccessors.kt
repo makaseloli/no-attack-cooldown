@@ -6,7 +6,6 @@ import org.gradle.api.Project
 import org.gradle.kotlin.dsl.getByType
 
 enum class VersionCatalogLibrary(val alias: String) {
-    FabricApi("fabric-api"),
     FabricLoader("fabric-loader"),
     Minecraft("minecraft"),
     Mixin("mixin"),

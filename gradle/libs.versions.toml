@@ -6,7 +6,6 @@ neoforged-moddev = "2.0.141"
 slf4j-api = "1.8.0-beta4"
 
 [libraries]
-fabric-api = { module = "net.fabricmc.fabric-api:fabric-api" }
 fabric-loader = { module = "net.fabricmc:fabric-loader", version.ref = "fabric-loader" }
 fabric-loom = { module = "net.fabricmc:fabric-loom", version.ref = "fabric-loom" }
 minecraft = { module = "com.mojang:minecraft" }

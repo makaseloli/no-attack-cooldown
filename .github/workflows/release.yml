@@ -3,22 +3,6 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      minecraft_version:
-        description: 'Minecraft version'
-        required: true
-        type: choice
-        options:
-          - '1.20.1'
-          - '1.21.1'
-          - '26.1'
-      loader:
-        description: 'Mod loader'
-        required: true
-        type: choice
-        options:
-          - fabric
-          - forge
-          - neo
       bump:
         description: 'Version bump type'
         required: true
@@ -41,14 +25,20 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Validate subproject
+      - name: Define release subprojects
         run: |
-          SUBPROJECT="${{ inputs.minecraft_version }}-${{ inputs.loader }}"
-          if [ ! -d "$SUBPROJECT" ]; then
-            echo "::error::Subproject '$SUBPROJECT' does not exist."
-            exit 1
-          fi
-          echo "SUBPROJECT=$SUBPROJECT" >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_SUBPROJECTS<<EOF'
+            echo '1.20.1-fabric'
+            echo '1.20.1-forge'
+            echo '1.21.1-fabric'
+            echo '1.21.1-neo'
+            echo '26.1-fabric'
+            echo '26.1-neo'
+            echo '26.1.2-fabric'
+            echo '26.1.2-neo'
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
 
       - name: Compute new version
         run: |
@@ -83,22 +73,53 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Build subproject
-        run: chmod u+x ./gradlew && ./gradlew ":$SUBPROJECT:build"
+      - name: Build release subprojects
+        run: |
+          chmod u+x ./gradlew
+          TASKS=()
+          while IFS= read -r SUBPROJECT; do
+            if [ ! -d "$SUBPROJECT" ]; then
+              echo "::error::Subproject '$SUBPROJECT' does not exist."
+              exit 1
+            fi
+            TASKS+=(":$SUBPROJECT:build")
+          done <<< "$RELEASE_SUBPROJECTS"
+          ./gradlew "${TASKS[@]}"
+
+      - name: Verify release artifacts
+        run: |
+          while IFS= read -r SUBPROJECT; do
+            ARTIFACT="$SUBPROJECT/build/libs/no_attack_cooldown-${SUBPROJECT}-v${NEW_VERSION}.jar"
+            if [ ! -f "$ARTIFACT" ]; then
+              echo "::error::Expected release artifact '$ARTIFACT' was not created."
+              exit 1
+            fi
+            echo "$ARTIFACT"
+          done <<< "$RELEASE_SUBPROJECTS"
 
       - name: Commit, tag and push
         run: |
-          TAG="${SUBPROJECT}-v${NEW_VERSION}"
+          TAG="v${NEW_VERSION}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add gradle.properties
-          git commit -m "release: ${SUBPROJECT} v${NEW_VERSION}"
+          if ! git diff --cached --quiet; then
+            git commit -m "release: v${NEW_VERSION}"
+          fi
           git tag "$TAG"
           git push origin HEAD --tags
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ env.SUBPROJECT }}-v${{ env.NEW_VERSION }}
+          tag_name: v${{ env.NEW_VERSION }}
           generate_release_notes: true
-          files: ${{ env.SUBPROJECT }}/build/libs/*.jar
+          files: |
+            1.20.1-fabric/build/libs/no_attack_cooldown-1.20.1-fabric-v${{ env.NEW_VERSION }}.jar
+            1.20.1-forge/build/libs/no_attack_cooldown-1.20.1-forge-v${{ env.NEW_VERSION }}.jar
+            1.21.1-fabric/build/libs/no_attack_cooldown-1.21.1-fabric-v${{ env.NEW_VERSION }}.jar
+            1.21.1-neo/build/libs/no_attack_cooldown-1.21.1-neo-v${{ env.NEW_VERSION }}.jar
+            26.1-fabric/build/libs/no_attack_cooldown-26.1-fabric-v${{ env.NEW_VERSION }}.jar
+            26.1-neo/build/libs/no_attack_cooldown-26.1-neo-v${{ env.NEW_VERSION }}.jar
+            26.1.2-fabric/build/libs/no_attack_cooldown-26.1.2-fabric-v${{ env.NEW_VERSION }}.jar
+            26.1.2-neo/build/libs/no_attack_cooldown-26.1.2-neo-v${{ env.NEW_VERSION }}.jar

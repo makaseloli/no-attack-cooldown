@@ -15,6 +15,9 @@
     "credits": ${mod_credits}
   },
   "environment": "*",
+  "mixins": [
+    "noattackcooldown.mixins.json"
+  ],
   "entrypoints": {
     "main": [
       ${mod_entrypoint}
@@ -26,7 +29,6 @@
   "depends": {
     "fabricloader": ${loader_version},
     "minecraft": ${minecraft_version},
-    "java": ">=17",
-    "fabric-api": "*"
+    "java": ">=17"
   }
 }
