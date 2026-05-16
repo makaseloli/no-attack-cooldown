@@ -90,14 +90,22 @@ jobs:
         run: |
           RELEASE_FILES="$(mktemp)"
           while IFS= read -r SUBPROJECT; do
-            ARTIFACT="$SUBPROJECT/build/libs/no_attack_cooldown-${SUBPROJECT}-v${NEW_VERSION}.jar"
-            if [ ! -f "$ARTIFACT" ]; then
-              echo "::error::Expected release artifact '$ARTIFACT' was not created."
+            mapfile -t ARTIFACTS < <(
+              find "$SUBPROJECT/build/libs" -maxdepth 1 -type f \
+                -name "*-${SUBPROJECT}-v${NEW_VERSION}.jar" \
+                ! -name "*-sources.jar" \
+                ! -name "*-javadoc.jar" \
+                ! -name "*-dev.jar" \
+                | sort
+            )
+            if [ "${#ARTIFACTS[@]}" -ne 1 ]; then
+              echo "::error::Expected exactly one release artifact for '$SUBPROJECT' v$NEW_VERSION, found ${#ARTIFACTS[@]}."
               echo "::group::$SUBPROJECT/build/libs"
               find "$SUBPROJECT/build/libs" -maxdepth 1 -type f -print | sort || true
               echo "::endgroup::"
               exit 1
             fi
+            ARTIFACT="${ARTIFACTS[0]}"
             echo "$ARTIFACT"
             echo "$ARTIFACT" >> "$RELEASE_FILES"
           done <<< "$RELEASE_SUBPROJECTS"
