@@ -84,18 +84,28 @@ jobs:
             fi
             TASKS+=(":$SUBPROJECT:build")
           done <<< "$RELEASE_SUBPROJECTS"
-          ./gradlew "${TASKS[@]}"
+          ./gradlew -PmodVersion="$NEW_VERSION" "${TASKS[@]}"
 
       - name: Verify release artifacts
         run: |
+          RELEASE_FILES="$(mktemp)"
           while IFS= read -r SUBPROJECT; do
             ARTIFACT="$SUBPROJECT/build/libs/no_attack_cooldown-${SUBPROJECT}-v${NEW_VERSION}.jar"
             if [ ! -f "$ARTIFACT" ]; then
               echo "::error::Expected release artifact '$ARTIFACT' was not created."
+              echo "::group::$SUBPROJECT/build/libs"
+              find "$SUBPROJECT/build/libs" -maxdepth 1 -type f -print | sort || true
+              echo "::endgroup::"
               exit 1
             fi
             echo "$ARTIFACT"
+            echo "$ARTIFACT" >> "$RELEASE_FILES"
           done <<< "$RELEASE_SUBPROJECTS"
+          {
+            echo 'RELEASE_FILES<<EOF'
+            cat "$RELEASE_FILES"
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
 
       - name: Commit, tag and push
         run: |
@@ -114,12 +124,4 @@ jobs:
         with:
           tag_name: v${{ env.NEW_VERSION }}
           generate_release_notes: true
-          files: |
-            1.20.1-fabric/build/libs/no_attack_cooldown-1.20.1-fabric-v${{ env.NEW_VERSION }}.jar
-            1.20.1-forge/build/libs/no_attack_cooldown-1.20.1-forge-v${{ env.NEW_VERSION }}.jar
-            1.21.1-fabric/build/libs/no_attack_cooldown-1.21.1-fabric-v${{ env.NEW_VERSION }}.jar
-            1.21.1-neo/build/libs/no_attack_cooldown-1.21.1-neo-v${{ env.NEW_VERSION }}.jar
-            26.1-fabric/build/libs/no_attack_cooldown-26.1-fabric-v${{ env.NEW_VERSION }}.jar
-            26.1-neo/build/libs/no_attack_cooldown-26.1-neo-v${{ env.NEW_VERSION }}.jar
-            26.1.2-fabric/build/libs/no_attack_cooldown-26.1.2-fabric-v${{ env.NEW_VERSION }}.jar
-            26.1.2-neo/build/libs/no_attack_cooldown-26.1.2-neo-v${{ env.NEW_VERSION }}.jar
+          files: ${{ env.RELEASE_FILES }}
