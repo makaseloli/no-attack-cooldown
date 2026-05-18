@@ -1,7 +1,6 @@
 package io.github.makaseloli.noattackcooldown.mixin;
 
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -18,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 abstract class PlayerMixin {
     @Inject(method = "getAttackStrengthScale", at = @At("HEAD"), cancellable = true)
     private void noattackcooldown$getAttackStrengthScale(float adjustTicks, CallbackInfoReturnable<Float> cir) {
-        if (noattackcooldown$isHoldingSword()) {
+        if (noattackcooldown$hasNoAttackCooldown()) {
             cir.setReturnValue(1.0F);
         }
     }
@@ -26,7 +25,7 @@ abstract class PlayerMixin {
     @Inject(method = "attack", at = @At("TAIL"))
     private void noattackcooldown$alwaysSweep(Entity target, CallbackInfo ci) {
         Player player = (Player)(Object)this;
-        if (player.level().isClientSide || !noattackcooldown$isHoldingSword() || !(target instanceof LivingEntity)) {
+        if (player.level().isClientSide || !noattackcooldown$hasNoAttackCooldown() || !(target instanceof LivingEntity)) {
             return;
         }
 
@@ -46,7 +45,7 @@ abstract class PlayerMixin {
         player.sweepAttack();
     }
 
-    private boolean noattackcooldown$isHoldingSword() {
-        return ((Player)(Object)this).getMainHandItem().is(ItemTags.SWORDS);
+    private boolean noattackcooldown$hasNoAttackCooldown() {
+        return true;
     }
 }
